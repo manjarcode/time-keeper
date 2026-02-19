@@ -155,6 +155,17 @@ export default function Timer() {
     fetchTimer();
   }, [fetchTimer]);
 
+  // Poll server every 5s when idle (no active timer) to detect timers started from other clients
+  useEffect(() => {
+    if (isActive || isFinished) return;
+
+    const pollInterval = setInterval(() => {
+      fetchTimer();
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [isActive, isFinished, fetchTimer]);
+
   // Client-side countdown tick (every second)
   useEffect(() => {
     if (!isActive || !timerRef.current) return;
