@@ -22,13 +22,50 @@ export default function Timer() {
   const [isActive, setIsActive] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [audioReady, setAudioReady] = useState(false);
 
   // Track server state for client-side countdown
   const timerRef = useRef<{ startedAt: number; durationMs: number } | null>(null);
   const hasNotifiedRef = useRef(false);
+  // If alarm should fire but audio wasn't ready yet
+  const pendingAlarmRef = useRef(false);
 
   const { playAlarm, ensureAudioContext, requestNotificationPermission, sendNotification } =
     useTimerSound();
+
+  // Unlock audio on first user interaction anywhere on the page
+  useEffect(() => {
+    const unlock = () => {
+      ensureAudioContext();
+      setAudioReady(true);
+
+      // If an alarm was pending (timer ended before user interacted), fire it now
+      if (pendingAlarmRef.current) {
+        pendingAlarmRef.current = false;
+        playAlarm();
+      }
+
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("touchstart", unlock);
+    };
+
+    document.addEventListener("click", unlock, { once: true });
+    document.addEventListener("touchstart", unlock, { once: true });
+
+    return () => {
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("touchstart", unlock);
+    };
+  }, [ensureAudioContext, playAlarm]);
+
+  // Helper: try to play alarm, or mark as pending if audio not unlocked yet
+  const tryPlayAlarm = useCallback(() => {
+    if (audioReady) {
+      playAlarm();
+    } else {
+      pendingAlarmRef.current = true;
+    }
+  }, [audioReady, playAlarm]);
 
   // Fetch timer state from server
   const fetchTimer = useCallback(async () => {
@@ -48,7 +85,7 @@ export default function Timer() {
 
         if (data.finished && !hasNotifiedRef.current) {
           hasNotifiedRef.current = true;
-          playAlarm();
+          tryPlayAlarm();
           sendNotification();
         }
       } else {
@@ -63,7 +100,7 @@ export default function Timer() {
     } finally {
       setLoading(false);
     }
-  }, [playAlarm, sendNotification]);
+  }, [tryPlayAlarm, sendNotification]);
 
   // Start a new timer
   const startTimer = useCallback(
@@ -135,14 +172,14 @@ export default function Timer() {
 
         if (!hasNotifiedRef.current) {
           hasNotifiedRef.current = true;
-          playAlarm();
+          tryPlayAlarm();
           sendNotification();
         }
       }
     }, 250); // Update 4x/sec for smooth countdown
 
     return () => clearInterval(interval);
-  }, [isActive, playAlarm, sendNotification]);
+  }, [isActive, tryPlayAlarm, sendNotification]);
 
   if (loading) {
     return (
@@ -154,6 +191,22 @@ export default function Timer() {
 
   return (
     <div className="flex flex-col items-center gap-10">
+      {/* Hint to unlock audio when timer is active but user hasn't interacted */}
+      {(isActive || isFinished) && !audioReady && (
+        <button
+          onClick={() => {
+            ensureAudioContext();
+            setAudioReady(true);
+            if (pendingAlarmRef.current || isFinished) {
+              pendingAlarmRef.current = false;
+              playAlarm();
+            }
+          }}
+          className="px-4 py-2 text-sm text-red-300 bg-red-900/40 border border-red-700/40 rounded-full animate-pulse hover:bg-red-900/60 transition-all cursor-pointer"
+        >
+          🔇 Toca aquí para activar el sonido
+        </button>
+      )}
       <TimerDisplay
         remainingMs={remainingMs}
         totalMs={totalMs}
