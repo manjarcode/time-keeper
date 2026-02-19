@@ -5,23 +5,31 @@ import { getTimer, saveTimer, clearTimer, TimerState } from "@/lib/timer-storage
 export async function GET() {
   const timer = await getTimer();
 
+  const noCacheHeaders = {
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+  };
+
   if (!timer) {
-    return NextResponse.json({ active: false, timer: null });
+    return NextResponse.json({ active: false, timer: null }, { headers: noCacheHeaders });
   }
 
   const elapsed = Date.now() - timer.startedAt;
   const remainingMs = Math.max(0, timer.durationMs - elapsed);
   const finished = remainingMs <= 0;
 
-  return NextResponse.json({
-    active: !finished,
-    finished,
-    timer: {
-      ...timer,
-      remainingMs,
-      elapsed,
+  return NextResponse.json(
+    {
+      active: !finished,
+      finished,
+      timer: {
+        ...timer,
+        remainingMs,
+        elapsed,
+      },
     },
-  });
+    { headers: noCacheHeaders }
+  );
 }
 
 // POST /api/timer — start a new timer

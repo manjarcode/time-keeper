@@ -70,7 +70,7 @@ export default function Timer() {
   // Fetch timer state from server
   const fetchTimer = useCallback(async () => {
     try {
-      const res = await fetch("/api/timer");
+      const res = await fetch("/api/timer", { cache: "no-store" });
       const data: TimerApiResponse = await res.json();
 
       if (data.timer) {
