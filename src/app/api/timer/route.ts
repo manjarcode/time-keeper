@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getTimer, saveTimer, clearTimer, TimerState } from "@/lib/timer-storage";
 
+// Force dynamic — never cache this route
+export const dynamic = "force-dynamic";
+
 // GET /api/timer — returns current timer state with computed remaining time
 export async function GET() {
   const timer = await getTimer();

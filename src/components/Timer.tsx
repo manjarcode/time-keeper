@@ -74,8 +74,12 @@ export default function Timer() {
       const data: TimerApiResponse = await res.json();
 
       if (data.timer) {
+        // Derive a client-relative startedAt to avoid clock skew between server and browser.
+        // The server computes `elapsed` using its own clock (consistent),
+        // so we anchor to the client's Date.now() minus that elapsed time.
+        const clientStartedAt = Date.now() - data.timer.elapsed;
         timerRef.current = {
-          startedAt: data.timer.startedAt,
+          startedAt: clientStartedAt,
           durationMs: data.timer.durationMs,
         };
         setTotalMs(data.timer.durationMs);
@@ -119,8 +123,9 @@ export default function Timer() {
         const data: TimerApiResponse = await res.json();
 
         if (data.timer) {
+          // Use client's clock for the timer we just created (elapsed ≈ 0)
           timerRef.current = {
-            startedAt: data.timer.startedAt,
+            startedAt: Date.now(),
             durationMs: data.timer.durationMs,
           };
           setTotalMs(data.timer.durationMs);

@@ -49,7 +49,7 @@ async function getTimerFromBlob(): Promise<TimerState | null> {
     const { blobs } = await list({ prefix: BLOB_FILENAME });
     if (blobs.length === 0) return null;
 
-    const res = await fetch(blobs[0].url);
+    const res = await fetch(blobs[0].url, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json()) as TimerState;
   } catch {
