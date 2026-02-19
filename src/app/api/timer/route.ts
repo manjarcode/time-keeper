@@ -3,7 +3,7 @@ import { getTimer, saveTimer, clearTimer, TimerState } from "@/lib/timer-storage
 
 // GET /api/timer — returns current timer state with computed remaining time
 export async function GET() {
-  const timer = getTimer();
+  const timer = await getTimer();
 
   if (!timer) {
     return NextResponse.json({ active: false, timer: null });
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     durationMs,
   };
 
-  saveTimer(state);
+  await saveTimer(state);
 
   return NextResponse.json({
     active: true,
@@ -55,6 +55,6 @@ export async function POST(request: Request) {
 
 // DELETE /api/timer — clear the current timer
 export async function DELETE() {
-  clearTimer();
+  await clearTimer();
   return NextResponse.json({ active: false, timer: null });
 }
