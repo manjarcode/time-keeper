@@ -27,7 +27,7 @@ export default function Timer() {
   const timerRef = useRef<{ startedAt: number; durationMs: number } | null>(null);
   const hasNotifiedRef = useRef(false);
 
-  const { playAlarm, requestNotificationPermission, sendNotification } =
+  const { playAlarm, ensureAudioContext, requestNotificationPermission, sendNotification } =
     useTimerSound();
 
   // Fetch timer state from server
@@ -69,6 +69,8 @@ export default function Timer() {
   const startTimer = useCallback(
     async (durationMs: number) => {
       hasNotifiedRef.current = false;
+      // Unlock AudioContext during user gesture (click) so alarm can play later
+      ensureAudioContext();
       await requestNotificationPermission();
 
       try {
@@ -93,7 +95,7 @@ export default function Timer() {
         // Silent fail
       }
     },
-    [requestNotificationPermission]
+    [requestNotificationPermission, ensureAudioContext]
   );
 
   // Cancel/clear the timer

@@ -1,37 +1,66 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 
 export function useTimerSound() {
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Must be called from a user gesture (click) to unlock audio
+  const ensureAudioContext = useCallback(() => {
+    if (!audioCtxRef.current) {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      audioCtxRef.current = new AudioCtx();
+    }
+    // Resume if suspended (browsers suspend contexts not started from user gesture)
+    if (audioCtxRef.current.state === "suspended") {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  }, []);
+
   const playAlarm = useCallback(() => {
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const ctx = new AudioCtx();
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
 
-      // Play a sequence of beeps
-      const beepDuration = 0.15;
-      const pauseDuration = 0.1;
-      const frequencies = [880, 1100, 880, 1100, 880, 1100];
+      // Resume just in case
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
 
-      frequencies.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+      // Play 3 rounds of beeps with pauses between rounds
+      const beepDuration = 0.18;
+      const pauseBetweenBeeps = 0.1;
+      const pauseBetweenRounds = 0.5;
+      const frequencies = [880, 1100, 880];
+      const rounds = 3;
 
-        osc.connect(gain);
-        gain.connect(ctx.destination);
+      for (let round = 0; round < rounds; round++) {
+        const roundOffset = round * (frequencies.length * (beepDuration + pauseBetweenBeeps) + pauseBetweenRounds);
 
-        osc.frequency.value = freq;
-        osc.type = "square";
+        frequencies.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
 
-        const startTime = ctx.currentTime + i * (beepDuration + pauseDuration);
-        gain.gain.setValueAtTime(0.3, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + beepDuration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
 
-        osc.start(startTime);
-        osc.stop(startTime + beepDuration);
-      });
-    } catch {
-      // Audio not available
+          osc.frequency.value = freq;
+          osc.type = "square";
+
+          const startTime = ctx.currentTime + roundOffset + i * (beepDuration + pauseBetweenBeeps);
+          gain.gain.setValueAtTime(0.35, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, startTime + beepDuration);
+
+          osc.start(startTime);
+          osc.stop(startTime + beepDuration + 0.01);
+        });
+      }
+    } catch (e) {
+      console.warn("Audio alarm failed:", e);
     }
   }, []);
 
@@ -50,5 +79,5 @@ export function useTimerSound() {
     }
   }, []);
 
-  return { playAlarm, requestNotificationPermission, sendNotification };
+  return { playAlarm, ensureAudioContext, requestNotificationPermission, sendNotification };
 }

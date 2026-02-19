@@ -8,7 +8,7 @@ export default function Home() {
       {/* Header */}
       <header className="mb-10 text-center">
         <h1 className="text-4xl font-bold text-red-100 tracking-tight">
-          Time Keeper
+          Tomatic Time Keeper
         </h1>
         <p className="mt-2 text-sm text-red-400/70 tracking-wide">
           Selecciona el tiempo y pulsa para iniciar
@@ -19,11 +19,6 @@ export default function Home() {
       <main>
         <Timer />
       </main>
-
-      {/* Footer */}
-      <footer className="mt-16 text-xs text-red-900/60">
-        Persistencia en servidor — el temporizador sobrevive reinicios
-      </footer>
     </div>
   );
 }
